@@ -1,0 +1,47 @@
+# Kubernetes / Helm
+*.tgz
+charts/
+templates/.DS_Store
+sealed-secret.yaml
+raw-secret.yaml
+db-password.txt
+
+# Node output (if using Node in the app)
+node_modules/
+npm-debug.log*
+
+# Python output (if using Flask/Python backend)
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+env/
+venv/
+
+# Java output (if using Spring Boot backend)
+target/
+*.class
+*.jar
+*.war
+*.log
+
+# Docker
+*.pid
+*.tar
+docker-compose.override.yml
+
+# macOS & system files
+.DS_Store
+Thumbs.db
+
+# Editors/IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+*.bak
+
+# Misc
+.env
+.env.*
+*.log
