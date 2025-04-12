@@ -1,51 +1,88 @@
-###################################################
-# Deployments & Statefulsets (APP & DB)
-# appName: petclinic
+app:
+  label: petclinic
+  image: dsyer/petclinic
+  replicaCount: 2
+  containerPort: 8080
 
-appLabel: petclinic
-appReplicaCount: 2
+  resources:
+    requests:
+      memory: "512Mi"
+      cpu: "100m"
+    limits:
+      memory: "1Gi"
+      cpu: "500m"
 
-dbLabel: demo-db
-dbReplicaCount: 1
+  configMap:
+    name: petclinic-config
+    data:
+      SPRING_PROFILES_ACTIVE: "postgres"
+      SERVICE_BINDING_ROOT: "/bindings"
+      SPRING_APPLICATION_JSON: |
+        {
+          "management.endpoint.health.probes.add-additional-paths": true
+        }
 
+  bindings:
+    enabled: true
+    mountPath: /bindings/secret
+    secretName: db-secrets
 
+db:
+  type: postgresql
+  label: demo-db
+  image: postgres
+  imageVersion: 17-alpine
+  containerPort: 5432
+  replicaCount: 1
+  secretName: db-secrets
 
-appImageName: dsyer/petclinic
-# appImageVersion: latest
-appContainerPort: 8080
+  env:
+    - name: POSTGRES_USER
+      valueFrom:
+        secretKeyRef:
+          name: db-secrets
+          key: username
+    - name: POSTGRES_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: db-secrets
+          key: password
+    - name: POSTGRES_DB
+      valueFrom:
+        secretKeyRef:
+          name: db-secrets
+          key: database
+          
+  resources:
+    requests:
+      cpu: "100m"
+      memory: "512Mi"
+    limits:
+      cpu: "500m"
+      memory: "1Gi"
 
-dbImageName: postgres
-dbImageVersion: 17
+  volume:
+    enabled: true
+    name: db-storage
+    mountPath: /var/lib/postgresql/data
+    accessModes:
+      - ReadWriteOnce
+    storageClassName: standard
+    size: 1Gi
 
-dbContainerPort: 5432
-
-###################################################
-# Services
-appService:
-  name: petclinic-service
-  ports:
+service:
+  app:
+    name: petclinic-service
     port: 80
     targetPort: 8080
 
-dbService:
-  name: demo-db
-  ports:
+  db:
+    name: demo-db
     port: 5432
 
-###################################################
-# Ingress 
 ingress:
+  enabled: true
   name: petclinic-ingress
-  rules:
-    host: petclinic.local
-    appServiceName: petclinic-service
-    appServicePort: 80
-
-###################################################
-# Configmaps 
-appConfigMap:
-  name: petclinic-conf
-
-# Secrets
-postgresqlSecret:
-  name: db-secrets
+  host: petclinic.local
+  serviceName: petclinic-service
+  servicePort: 80

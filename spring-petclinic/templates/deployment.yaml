@@ -1,41 +1,53 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Values.appLabel }}-deployment
+  name: {{ .Values.app.label }}-deployment
 spec:
-  replicas: {{ .Values.appReplicaCount }}
+  replicas: {{ .Values.app.replicaCount }}
   selector:
     matchLabels:
-      app: {{ .Values.appLabel }}
+      app: {{ .Values.app.label }}
   template:
     metadata:
       labels:
-        app: {{ .Values.appLabel }}
+        app: {{ .Values.app.label }}
     spec:
       containers:
-        - name: {{ .Values.appLabel }}-container
-          image: {{ .Values.appImageName }}
+        - name: {{ .Values.app.label }}-container
+          image: "{{ .Values.app.image }}"
           envFrom:
             - configMapRef:
-                name: {{ .Values.appConfigMap.name }}
+                name: {{ .Values.app.configMap.name }}
           ports:
             - name: http
-              containerPort: {{ .Values.appContainerPort }}
+              containerPort: {{ .Values.app.containerPort }}
+          # resources:
+          #   requests:
+          #     cpu: {{ .Values.app.resources.requests.cpu | quote }}
+          #     memory: {{ .Values.app.resources.requests.memory | quote }}
+          #   limits:
+          #     cpu: {{ .Values.app.resources.limits.cpu | quote }}
+          #     memory: {{ .Values.app.resources.limits.memory | quote }}
           livenessProbe:
-            httpGet:
-              path: /livez
+            tcpSocket:
               port: http
           readinessProbe:
-            httpGet:
-              path: /readyz
+            tcpSocket:
               port: http
+          startupProbe:
+            tcpSocket:
+              port: http
+          {{- if .Values.app.bindings.enabled }}
           volumeMounts:
-            - mountPath: /bindings/secret
+            - mountPath: {{ .Values.app.bindings.mountPath }}
               name: binding
               readOnly: true
+          {{- end }}
+      {{- if .Values.app.bindings.enabled }}
       volumes:
         - name: binding
           projected:
             sources:
               - secret:
-                  name: {{ .Values.postgresqlSecret.name }}
+                  name: {{ .Values.app.bindings.secretName }}
+      {{- end }}

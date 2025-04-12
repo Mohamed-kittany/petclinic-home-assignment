@@ -1,10 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: {{ .Values.dbService.name }}
+  name: {{ .Values.service.db.name }}
 spec:
   ports:
-    - port: {{ .Values.dbService.ports.port }}
-  clusterIP: None
+    - port: {{ .Values.service.db.port }}
+      targetPort: {{ .Values.db.containerPort }}
   selector:
-    app: {{ .Values.dbLabel }}
+    app: {{ .Values.db.label }}
+  clusterIP: None
