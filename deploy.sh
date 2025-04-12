@@ -7,6 +7,10 @@ CHART_DIR="spring-petclinic"
 NAMESPACE="default"
 DOMAIN="petclinic.local"
 SEALED_SECRET_NAME="db-secrets"
+DB_USERNAME="user"
+DB_NAME="petclinic"
+DB_HOST="demo-db"
+DB_PORT="5432"
 RANDOM_PASSWORD=$(openssl rand -base64 12)
 
 # === Functions ===
@@ -26,7 +30,7 @@ function validate_prerequisites() {
 
 function ensure_minikube_running() {
   if ! minikube status | grep -q "Running"; then
-    echo "🚀 Starting Minikube with more resources..."
+    echo "🚀 Starting Minikubee..."
     minikube start --cpus=4 --memory=4096
   else
     echo "✅ Minikube is already running."
@@ -41,19 +45,6 @@ function enable_ingress() {
   else
     echo "✅ Ingress addon already enabled."
   fi
-
-  echo "⏳ Waiting for ingress controller pod to be ready..."
-  ATTEMPTS=0
-  until kubectl get pods -n ingress-nginx | grep controller | grep -q "Running"; do
-    sleep 5
-    ((ATTEMPTS++))
-    if [ $ATTEMPTS -gt 18 ]; then
-      echo "❌ Ingress controller failed to become ready after 90 seconds."
-      kubectl get pods -n ingress-nginx
-      exit 1
-    fi
-    echo "⌛ Waiting for ingress-nginx... ($ATTEMPTS/18)"
-  done
 
   echo "✅ Ingress controller is ready."
 }
@@ -70,7 +61,6 @@ function update_hosts_file() {
     echo "echo \"$MINIKUBE_IP $DOMAIN\" | sudo tee -a /etc/hosts"
   fi
 }
-
 
 function install_sealed_secrets() {
   echo "🔐 Installing Sealed Secrets via Helm..."
@@ -97,13 +87,13 @@ metadata:
   namespace: $NAMESPACE
 type: servicebinding.io/postgresql
 stringData:
+  database: "$DB_NAME"
+  username: "$DB_USERNAME"
+  password: "$RANDOM_PASSWORD"
   type: "postgresql"
   provider: "postgresql"
-  host: "demo-db"
-  port: "5432"
-  database: "petclinic"
-  username: "user"
-  password: "$RANDOM_PASSWORD"
+  host: "$DB_HOST"
+  port: "$DB_PORT"
 EOF
 
   echo "🔐 Sealing the secret..."
@@ -118,11 +108,9 @@ EOF
   echo "💾 Saving DB credentials to db-password.txt..."
   cat <<EOF > db-password.txt
 # PostgreSQL Credentials for petclinic
-host=demo-db
-port=5432
-database=petclinic
-username=user
-password=$RANDOM_PASSWORD
+database: "$DB_NAME"
+username: "$DB_USERNAME"
+password: "$RANDOM_PASSWORD"
 EOF
 
   echo "✅ DB credentials saved to db-password.txt"
@@ -133,7 +121,6 @@ EOF
 
 
 function deploy_helm_chart() {
-  echo "📦 Deploying Helm chart..."
   helm upgrade --install "$RELEASE_NAME" "$CHART_DIR" \
     --namespace "$NAMESPACE" \
     --create-namespace \
@@ -155,7 +142,7 @@ install_sealed_secrets
 echo "🔏 Creating and applying sealed secret..."
 generate_and_apply_sealed_secret
 
-echo "🚢 Deploying Helm chart..."
+echo "📦 Deploying Helm chart..."
 deploy_helm_chart
 
 echo "✅ Deployment complete!"
