@@ -1,11 +1,11 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: petclinic
+  name: {{ .Values.appService.name }}
 spec:
   type: ClusterIP
   ports:
-    - port: 80
-      targetPort: 8080
+    - port: {{ .Values.appService.ports.port }}
+      targetPort: {{ .Values.appService.ports.targetPort }}
   selector:
-    app: petclinic
+    app: {{ .Values.appLabel }}

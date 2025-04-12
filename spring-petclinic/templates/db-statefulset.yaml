@@ -1,41 +1,41 @@
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
-  name: demo-db
+  name: {{ .Values.dbLabel }}
   labels:
-    app: demo-db
+    app: {{ .Values.dbLabel }}
 spec:
-  serviceName: demo-db
-  replicas: 1
+  serviceName: {{ .Values.dbLabel }}
+  replicas: {{ .Values.dbReplicaCount }}
   selector:
     matchLabels:
-      app: demo-db
+      app: {{ .Values.dbLabel }}
   template:
     metadata:
       labels:
-        app: demo-db
+        app: {{ .Values.dbLabel }}
     spec:
       containers:
-        - image: postgres:17
+        - image: "{{ .Values.dbImageName }}:{{ .Values.dbImageVersion }}"
           name: postgresql
           env:
             - name: POSTGRES_USER
               valueFrom:
                 secretKeyRef:
-                  name: demo-db
+                  name: {{ .Values.postgresqlSecret.name }}
                   key: username
             - name: POSTGRES_PASSWORD
               valueFrom:
                 secretKeyRef:
-                  name: demo-db
+                  name: {{ .Values.postgresqlSecret.name }}
                   key: password
             - name: POSTGRES_DB
               valueFrom:
                 secretKeyRef:
-                  name: demo-db
+                  name: {{ .Values.postgresqlSecret.name }}
                   key: database
           ports:
-            - containerPort: 5432
+            - containerPort: {{ .Values.dbContainerPort }}
               name: postgresql
           livenessProbe:
             tcpSocket:

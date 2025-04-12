@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.appConfigMap.name }}
+data:
+  SPRING_PROFILES_ACTIVE: postgres
+  SERVICE_BINDING_ROOT: /bindings
+  SPRING_APPLICATION_JSON: |
+    {
+      "management.endpoint.health.probes.add-additional-paths": true
+    }

@@ -1,33 +1,26 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: {{ .Release.Name }}-app
+  name: {{ .Values.appLabel }}-deployment
 spec:
-  replicas: 1
+  replicas: {{ .Values.appReplicaCount }}
   selector:
     matchLabels:
-      app: petclinic
+      app: {{ .Values.appLabel }}
   template:
     metadata:
       labels:
-        app: petclinic
+        app: {{ .Values.appLabel }}
     spec:
       containers:
-        - name: petclinic-container
-          image: dsyer/petclinic
-          env:
-            - name: SPRING_PROFILES_ACTIVE
-              value: postgres
-            - name: SERVICE_BINDING_ROOT
-              value: /bindings
-            - name: SPRING_APPLICATION_JSON
-              value: |
-                {
-                  "management.endpoint.health.probes.add-additional-paths": true
-                }
+        - name: {{ .Values.appLabel }}-container
+          image: {{ .Values.appImageName }}
+          envFrom:
+            - configMapRef:
+                name: {{ .Values.appConfigMap.name }}
           ports:
             - name: http
-              containerPort: 8080
+              containerPort: {{ .Values.appContainerPort }}
           livenessProbe:
             httpGet:
               path: /livez
@@ -45,4 +38,4 @@ spec:
           projected:
             sources:
               - secret:
-                  name: demo-db
+                  name: {{ .Values.postgresqlSecret.name }}
