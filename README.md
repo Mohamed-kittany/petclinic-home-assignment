@@ -3,7 +3,10 @@
 This project demonstrates deploying the [Spring Petclinic](https://github.com/spring-projects/spring-petclinic/) application on a **local Kubernetes cluster** using **Helm**, **StatefulSet for PostgreSQL**, and **Sealed Secrets** for secure secret management.
 
 ---
+## 🔁 data workflow
+![data-workflow](images/data-workflow.png)
 
+---
 ## 📦 Project Structure
 
 ```
