@@ -38,13 +38,22 @@ function ensure_minikube_running() {
 }
 
 function enable_ingress() {
-  echo "🌐 Enabling ingress controller via Minikube addon..."
+  echo "📡 Waiting for kube-root-ca.crt ConfigMap to exist..."
 
-  if ! minikube addons list | grep ingress | grep -q enabled; then
-    minikube addons enable ingress
-  else
-    echo "✅ Ingress addon already enabled."
-  fi
+  # Wait until kube-root-ca.crt configmap is created
+  until kubectl get configmap kube-root-ca.crt -n kube-system &>/dev/null; do
+    sleep 2
+    echo "⏳ Waiting for kube-root-ca.crt..."
+  done
+
+  echo "🌐 (Re)Enabling ingress controller via Minikube addon..."
+
+  minikube addons disable ingress || true
+  sleep 3
+  minikube addons enable ingress
+
+  echo "⏳ Waiting for ingress-nginx controller to be ready..."
+  kubectl rollout status deployment ingress-nginx-controller -n ingress-nginx --timeout=180s
 
   echo "✅ Ingress controller is ready."
 }
