@@ -1,3 +1,4 @@
+#########################################################################
 app:
   label: petclinic
   image: dsyer/petclinic
@@ -19,7 +20,8 @@ app:
       SERVICE_BINDING_ROOT: "/bindings"
       SPRING_APPLICATION_JSON: |
         {
-          "management.endpoint.health.probes.add-additional-paths": true
+          "management.endpoint.health.probes.add-additional-paths": true,
+          "spring.datasource.url": "jdbc:postgresql://demo-db-postgresql:5432/petclinic"
         }
 
   bindings:
@@ -27,59 +29,32 @@ app:
     mountPath: /bindings/secret
     secretName: db-secrets
 
-db:
-  type: postgresql
-  label: demo-db
-  image: postgres
-  imageVersion: 17-alpine
-  containerPort: 5432
-  replicaCount: 1
-  secretName: db-secrets
+#########################################################################
+# Bitnami PostgreSQL instead of custom DB
+postgresql:
+  enabled: true
+  fullnameOverride: demo-db
 
-  env:
-    - name: POSTGRES_USER
-      valueFrom:
-        secretKeyRef:
-          name: db-secrets
-          key: username
-    - name: POSTGRES_PASSWORD
-      valueFrom:
-        secretKeyRef:
-          name: db-secrets
-          key: password
-    - name: POSTGRES_DB
-      valueFrom:
-        secretKeyRef:
-          name: db-secrets
-          key: database
-          
-  resources:
-    requests:
-      cpu: "100m"
-      memory: "512Mi"
-    limits:
-      cpu: "500m"
-      memory: "1Gi"
+  auth:
+    # password is NOT specified here, taken from `db-secrets` secret
+    existingSecret: db-secrets  # Secret injected via SealedSecrets
+    username: user
+    database: petclinic
 
-  volume:
-    enabled: true
-    name: db-storage
-    mountPath: /var/lib/postgresql/data
-    accessModes:
-      - ReadWriteOnce
-    storageClassName: standard
-    size: 1Gi
+  primary:
+    persistence:
+      enabled: true
+      storageClass: standard
+      size: 1Gi
 
+#########################################################################
 service:
   app:
     name: petclinic-service
     port: 80
     targetPort: 8080
 
-  db:
-    name: demo-db
-    port: 5432
-
+#########################################################################
 ingress:
   enabled: true
   name: petclinic-ingress

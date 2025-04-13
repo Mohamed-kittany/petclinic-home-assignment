@@ -30,7 +30,7 @@ function validate_prerequisites() {
 
 function ensure_minikube_running() {
   if ! minikube status | grep -q "Running"; then
-    echo "🚀 Starting Minikubee..."
+    echo "🚀 Starting Minikube..."
     minikube start --cpus=4 --memory=4096
   else
     echo "✅ Minikube is already running."
@@ -38,15 +38,17 @@ function ensure_minikube_running() {
 }
 
 function enable_ingress() {
-  echo "🌐 Enabling ingress controller via Minikube addon..."
+  echo "🌐 Installing ingress-nginx via Helm..."
 
-  if ! minikube addons list | grep ingress | grep -q enabled; then
-    minikube addons enable ingress
-  else
-    echo "✅ Ingress addon already enabled."
-  fi
+  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
+  helm repo update
 
-  echo "✅ Ingress controller is ready."
+  helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
+    --namespace ingress-nginx \
+    --create-namespace \
+    --wait
+
+  echo "✅ Ingress controller installed via Helm."
 }
 
 function update_hosts_file() {
@@ -77,9 +79,9 @@ function install_sealed_secrets() {
 }
 
 function generate_and_apply_sealed_secret() {
-  echo "🔑 Generating PostgreSQL-style secret with random password..."
+  echo "🔑 Creating raw Kubernetes secret for DB credentials..."
 
-  cat <<EOF > raw-secret.yaml
+cat <<EOF > raw-secret.yaml
 apiVersion: v1
 kind: Secret
 metadata:
@@ -87,14 +89,16 @@ metadata:
   namespace: $NAMESPACE
 type: servicebinding.io/postgresql
 stringData:
+  type: postgresql
+  provider: postgresql
   database: "$DB_NAME"
   username: "$DB_USERNAME"
   password: "$RANDOM_PASSWORD"
-  type: "postgresql"
-  provider: "postgresql"
   host: "$DB_HOST"
   port: "$DB_PORT"
 EOF
+
+
 
   echo "🔐 Sealing the secret..."
   kubeseal \
@@ -105,7 +109,7 @@ EOF
   echo "📦 Applying sealed secret..."
   kubectl apply -f sealed-secret.yaml
 
-  echo "💾 Saving DB credentials to db-password.txt..."
+  echo "💾 Saving DB credentials to db-password.txt (DO NOT COMMIT)..."
   cat <<EOF > db-password.txt
 # PostgreSQL Credentials for petclinic
 database: "$DB_NAME"
@@ -115,12 +119,12 @@ EOF
 
   echo "✅ DB credentials saved to db-password.txt"
 
-  echo "🚮 Cleaning up raw secret..."
+  echo "🧹 Cleaning up raw secret..."
   rm raw-secret.yaml
 }
 
-
 function deploy_helm_chart() {
+  echo "🚀 Deploying application via Helm..."
   helm upgrade --install "$RELEASE_NAME" "$CHART_DIR" \
     --namespace "$NAMESPACE" \
     --create-namespace \
@@ -134,12 +138,13 @@ validate_prerequisites
 echo "🧱 Ensuring Minikube is running..."
 ensure_minikube_running
 
+echo "🌐 Installing Ingress..."
 enable_ingress
 
 echo "🔐 Installing Sealed Secrets..."
 install_sealed_secrets
 
-echo "🔏 Creating and applying sealed secret..."
+echo "🔏 Generating and applying sealed secret..."
 generate_and_apply_sealed_secret
 
 echo "📦 Deploying Helm chart..."
@@ -151,5 +156,5 @@ echo
 echo "📇 Updating /etc/hosts..."
 update_hosts_file
 
-echo 
+echo
 echo "🌍 Visit your app at: http://$DOMAIN"
