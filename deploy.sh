@@ -38,17 +38,24 @@ function ensure_minikube_running() {
 }
 
 function enable_ingress() {
-  echo "🌐 Installing ingress-nginx via Helm..."
+  echo "📡 Waiting for kube-root-ca.crt ConfigMap to exist..."
 
-  helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-  helm repo update
+  # Wait until kube-root-ca.crt configmap is created
+  until kubectl get configmap kube-root-ca.crt -n kube-system &>/dev/null; do
+    sleep 2
+    echo "⏳ Waiting for kube-root-ca.crt..."
+  done
 
-  helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx \
-    --namespace ingress-nginx \
-    --create-namespace \
-    --wait
+  echo "🌐 (Re)Enabling ingress controller via Minikube addon..."
 
-  echo "✅ Ingress controller installed via Helm."
+  minikube addons disable ingress || true
+  sleep 3
+  minikube addons enable ingress
+
+  echo "⏳ Waiting for ingress-nginx controller to be ready..."
+  kubectl rollout status deployment ingress-nginx-controller -n ingress-nginx --timeout=180s
+
+  echo "✅ Ingress controller is ready."
 }
 
 function update_hosts_file() {
