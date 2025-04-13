@@ -1,5 +1,5 @@
 # Kubernetes / Helm
-*.tgz
+# *.tgz
 # charts/
 templates/.DS_Store
 # sealed-secret.yaml
